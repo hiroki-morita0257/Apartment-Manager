@@ -1,41 +1,38 @@
-const buildings = [
-  {
-    name: "K2ハイム",
-    floors: [
-      { level: "3F", rooms: ["301", "302", "303", "305"] },
-      { level: "2F", rooms: ["201", "202", "203", "205"] },
-      { level: "1F", rooms: ["101", "102", "103", "105"] },
-    ],
-    shared: "共用部分",
-  },
-  {
-    name: "コーポ萩",
-    floors: [
-      { level: "2F", rooms: ["A", "B"] },
-    ],
-    shared: "共用部分",
-  },
-];
+import Link from "next/link";
+import { buildings, rooms, type Building } from "@/src/data/mock-data";
 
 const menuItems = ["入居者一覧", "契約管理", "修繕履歴", "家賃確認"];
 const roomButtonWidth = 200;
 
 function BuildingCard({
-  name,
-  floors,
-  shared,
+  building,
 }: {
-  name: string;
-  floors: { level: string; rooms: string[] }[];
-  shared: string;
+  building: Building;
 }) {
+  const buildingRooms = rooms.filter((room) => room.buildingId === building.id);
+  const sharedRoom = buildingRooms.find((room) => room.floor === "common");
+  const floorLevels = [
+    ...new Set(
+      buildingRooms
+        .filter((room) => room.floor !== "common")
+        .map((room) => room.floor),
+    ),
+  ].sort((a, b) => b.localeCompare(a, "ja", { numeric: true }));
+  const floors = floorLevels.map((level) => ({
+    level,
+    rooms: buildingRooms
+      .filter((room) => room.floor === level)
+      .sort((a, b) =>
+        a.roomNumber.localeCompare(b.roomNumber, "ja", { numeric: true }),
+      ),
+  }));
   const maxRooms = Math.max(...floors.map((floor) => floor.rooms.length), 2);
   const gridTemplateColumns = `52px repeat(${maxRooms}, ${roomButtonWidth}px)`;
 
   return (
     <section className="rounded-xl border border-slate-300 bg-white p-3">
       <div className="mb-2">
-        <h2 className="text-sm font-semibold text-slate-900">{name}</h2>
+        <h2 className="text-sm font-semibold text-slate-900">{building.name}</h2>
       </div>
 
       <div className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5">
@@ -54,13 +51,13 @@ function BuildingCard({
                 const room = floor.rooms[index];
 
                 return room ? (
-                  <button
-                    key={room}
-                    type="button"
-                    className="h-14 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:bg-slate-100"
+                  <Link
+                    key={room.id}
+                    href={`/rooms/${room.id}`}
+                    className="flex h-14 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700"
                   >
-                    {room}
-                  </button>
+                    {room.roomNumber}
+                  </Link>
                 ) : (
                   <div
                     key={`${floor.level}-empty-${index}`}
@@ -75,12 +72,18 @@ function BuildingCard({
             <div className="flex h-14 items-center justify-center rounded-lg bg-slate-200 text-[11px] font-medium text-slate-600">
               共用
             </div>
-            <button
-              type="button"
-              className="col-span-2 h-14 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:bg-slate-100"
-            >
-              {shared}
-            </button>
+            {sharedRoom ? (
+              <Link
+                href={`/rooms/${sharedRoom.id}`}
+                className="col-span-2 flex h-14 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700"
+              >
+                {sharedRoom.name}
+              </Link>
+            ) : (
+              <div className="col-span-2 flex h-14 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 text-sm text-slate-500">
+                共用部分データなし
+              </div>
+            )}
             {maxRooms > 2 &&
               Array.from({ length: maxRooms - 2 }).map((_, index) => (
                 <div
@@ -109,7 +112,7 @@ export default function Home() {
 
           <div className="grid min-h-0 flex-1 gap-3 content-start">
             {buildings.map((building) => (
-              <BuildingCard key={building.name} {...building} />
+              <BuildingCard key={building.id} building={building} />
             ))}
           </div>
         </div>
